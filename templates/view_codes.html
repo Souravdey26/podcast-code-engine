@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Codes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        nav {
+            background: #35424a;
+            color: #ffffff;
+            padding: 20px 0;
+            width: 100%;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            z-index: 1000;
+        }
+        nav ul {
+            padding: 0;
+            list-style: none;
+            margin: 0;
+            text-align: center;
+        }
+        nav ul li {
+            display: inline;
+            margin: 0 20px;
+        }
+        nav ul li a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        nav ul li a:hover {
+            color: #e8491d;
+        }
+        .container {
+            width: 80%;
+            margin-top: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #35424a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #35424a;
+            color: #ffffff;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        footer {
+            background: #35424a;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px 0;
+            width: 100%;
+            position: fixed;
+            bottom: 0;
+        }
+        footer ul {
+            padding: 0;
+            list-style: none;
+            margin: 0;
+        }
+        footer ul li {
+            display: inline;
+            margin: 0 10px;
+        }
+        footer ul li a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        footer ul li a:hover {
+            color: #e8491d;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/upload">Upload</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/view_codes">View Codes</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <h1>Saved Codes</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Article ID</th>
+                    <th>Publication Name</th>
+                    <th>Publication Type</th>
+                    <th>Date of Publication</th>
+                    <th>Type of Article</th>
+                    <th>Author Name</th>
+                    <th>Type of Author</th>
+                    <th>Focus/Main Topic</th>
+                    <th>Actor Mentioned</th>
+                    <th>Dominant Frame</th>
+                    <th>Benefit/Opportunity Frame</th>
+                    <th>Risk/Threat Frame</th>
+                    <th>AI Ethics</th>
+                    <th>Attribution of Responsibility</th>
+                    <th>Human Interest Frame</th>
+                    <th>Type of Frame</th>
+                    <th>Tone of Article</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for code in codes %}
+                <tr>
+                    <td>{{ code['article_id'] }}</td>
+                    <td>{{ code['publication_name'] }}</td>
+                    <td>{{ code['publication_type'] }}</td>
+                    <td>{{ code['date_of_publication'] }}</td>
+                    <td>{{ code['type_of_article'] }}</td>
+                    <td>{{ code['author_name'] }}</td>
+                    <td>{{ code['type_of_author'] }}</td>
+                    <td>{{ code['focus_main_topic'] }}</td>
+                    <td>{{ code['actor_mentioned'] }}</td>
+                    <td>{{ code['dominant_frame'] }}</td>
+                    <td>{{ code['benefit_opportunity_frame'] }}</td>
+                    <td>{{ code['risk_threat_frame'] }}</td>
+                    <td>{{ code['ai_ethics'] }}</td>
+                    <td>{{ code['attribution_of_responsibility'] }}</td>
+                    <td>{{ code['human_interest_frame'] }}</td>
+                    <td>{{ code['type_of_frame'] }}</td>
+                    <td>{{ code['tone_of_article'] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <footer>
+        <ul>
+            <li><a href="/contact">Contact Us</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+        </ul>
+        <p>&copy; 2024 Article Coding. All Rights Reserved.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Article</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        nav {
+            background: #35424a;
+            color: #ffffff;
+            padding: 20px 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        nav ul {
+            padding: 0;
+            list-style: none;
+            text-align: center;
+            margin: 0;
+        }
+        nav ul li {
+            display: inline;
+            margin: 0 20px;
+        }
+        nav ul li a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        nav ul li a:hover {
+            color: #e8491d;
+        }
+        .container {
+            width: 80%;
+            margin-top: 120px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .article-content, .coding-sheet {
+            width: 48%;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        h1, h2 {
+            color: #35424a;
+        }
+        .article-content p, .coding-sheet p {
+            color: #333;
+        }
+        .coding-sheet form {
+            margin-top: 20px;
+        }
+        .coding-sheet form label {
+            display: block;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .coding-sheet form input[type="text"], .coding-sheet form textarea, .coding-sheet form input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .coding-sheet form .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .coding-sheet form .checkbox-group label {
+            width: 50%;
+            display: flex;
+            align-items: center;
+        }
+        .coding-sheet form .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .coding-sheet form button {
+            background: #35424a;
+            color: #ffffff;
+            border: 0;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .coding-sheet form button:hover {
+            background: #e8491d;
+        }
+        .navigation-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .navigation-buttons a {
+            background: #35424a;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: inline-block;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        .navigation-buttons a:hover {
+            background: #e8491d;
+        }
+        .progress {
+            text-align: center;
+            margin-top: 20px;
+        }
+        footer {
+            background: #35424a;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px 0;
+            width: 100%;
+            margin-top: 20px;
+        }
+        footer ul {
+            padding: 0;
+            list-style: none;
+        }
+        footer ul li {
+            display: inline;
+            margin: 0 10px;
+        }
+        footer ul li a {
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+        footer ul li a:hover {
+            color: #e8491d;
+        }
+        .search-bar {
+            margin-bottom: 20px;
+        }
+        .search-bar input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .search-bar button {
+            padding: 10px 20px;
+            background: #35424a;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .search-bar button:hover {
+            background: #e8491d;
+        }
+        .highlight {
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/upload">Upload</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/view_codes">View Codes</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        <div class="article-content">
+            <h1>{{ article['Title'] }}</h1>
+            <p><strong>Author:</strong> {{ article['Author'] }}</p>
+            <p><strong>Date:</strong> {{ article['Date'] }}</p>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search in content...">
+                <button onclick="highlightSearch()">Search</button>
+            </div>
+            <p id="articleContent">{{ article['Content'] }}</p>
+            <p><a href="{{ article['Link'] }}" target="_blank">Read full article</a></p>
+        </div>
+        <div class="coding-sheet">
+            <h2>Code This Article</h2>
+            <form method="post">
+                <!-- 1. PUBLICATION NAME -->
+                <label for="publication_name">Publication Name:</label>
+                <input type="text" id="publication_name" name="publication_name" required>
+
+                <!-- 2. PUBLICATION TYPE -->
+                <label for="publication_type">Publication Type:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="publication_type" value="Legacy"> Legacy</label>
+                    <label><input type="checkbox" name="publication_type" value="Web Only"> Web Only</label>
+                </div>
+
+                <!-- 3. DATE OF PUBLICATION -->
+                <label for="date_of_publication">Date of Publication:</label>
+                <input type="date" id="date_of_publication" name="date_of_publication" required>
+
+                <!-- 4. TYPE OF ARTICLE -->
+                <label for="type_of_article">Type of Article:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="type_of_article" value="News report"> News report</label>
+                    <label><input type="checkbox" name="type_of_article" value="Interview"> Interview</label>
+                    <label><input type="checkbox" name="type_of_article" value="Editorial"> Editorial</label>
+                    <label><input type="checkbox" name="type_of_article" value="Columns"> Columns</label>
+                    <label><input type="checkbox" name="type_of_article" value="Other"> Other</label>
+                    <input type="text" name="type_of_article_other" placeholder="Specify other type">
+                </div>
+
+                <!-- 5. AUTHOR NAME -->
+                <label for="author_name">Author Name:</label>
+                <input type="text" id="author_name" name="author_name" required>
+
+                <!-- 6. TYPE OF AUTHOR -->
+                <label for="type_of_author">Type of Author:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="type_of_author" value="Journalist"> Journalist</label>
+                    <label><input type="checkbox" name="type_of_author" value="Industry expert"> Industry expert</label>
+                    <label><input type="checkbox" name="type_of_author" value="Technical expert"> Technical expert</label>
+                    <label><input type="checkbox" name="type_of_author" value="Non-technical expert"> Non-technical expert</label>
+                    <label><input type="checkbox" name="type_of_author" value="Political stakeholder"> Political stakeholder</label>
+                    <label><input type="checkbox" name="type_of_author" value="Govt. Stakeholder"> Govt. Stakeholder</label>
+                    <label><input type="checkbox" name="type_of_author" value="Other"> Other</label>
+                    <input type="text" name="type_of_author_other" placeholder="Specify other type">
+                </div>
+
+                <!-- 7. FOCUS / MAIN TOPIC OF THE ARTICLE -->
+                <label for="focus_main_topic">Focus / Main Topic of the Article:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="focus_main_topic" value="AI in education"> AI in education</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI in entertainment"> AI in entertainment</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI in business"> AI in business</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI in health"> AI in health</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI technology and research"> AI technology and research</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI policy and regulation"> AI policy and regulation</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI and big tech"> AI and big tech</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="Ethics"> Ethics</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="AI and politics"> AI and politics</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="Impact on society"> Impact on society</label>
+                    <label><input type="checkbox" name="focus_main_topic" value="Other"> Other</label>
+                    <input type="text" name="focus_main_topic_other" placeholder="Specify other focus/main topic">
+                </div>
+
+                <!-- 8. ACTOR MENTIONED IN THE ARTICLE -->
+                <label for="actor_mentioned">Actor Mentioned in the Article:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="actor_mentioned" value="Private entity"> Private entity</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Govt. Entity"> Govt. Entity</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Common citizen"> Common citizen</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Technical expert"> Technical expert</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Non-technical expert"> Non-technical expert</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="NGO"> NGO</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Political stakeholder other than govt"> Political stakeholder other than govt</label>
+                    <label><input type="checkbox" name="actor_mentioned" value="Other"> Other</label>
+                    <input type="text" name="actor_mentioned_other" placeholder="Specify other actor">
+                </div>
+
+                <!-- 9. DOMINANT FRAME USED -->
+                <label for="dominant_frame">Dominant Frame Used:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="dominant_frame" value="Benefit / opportunity frame"> Benefit / opportunity frame</label>
+                    <label><input type="checkbox" name="dominant_frame" value="Risk / threat frame"> Risk / threat frame</label>
+                    <label><input type="checkbox" name="dominant_frame" value="AI ethics frame"> AI ethics frame</label>
+                    <label><input type="checkbox" name="dominant_frame" value="Attribution of responsibility frame"> Attribution of responsibility frame</label>
+                    <label><input type="checkbox" name="dominant_frame" value="Human interest frame"> Human interest frame</label>
+                    <label><input type="checkbox" name="dominant_frame" value="Na"> Na</label>
+                    <label><input type="checkbox" name="dominant_frame" value="Other frame"> Other frame</label>
+                    <input type="text" name="dominant_frame_other" placeholder="Specify other frame">
+                </div>
+
+                <!-- 10. BENEFIT / OPPORTUNITY FRAME -->
+                <label for="benefit_opportunity_frame">Benefit / Opportunity Frame:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="benefit_opportunity_frame" value="Social progress"> Social progress</label>
+                    <label><input type="checkbox" name="benefit_opportunity_frame" value="Quality of life"> Quality of life</label>
+                    <label><input type="checkbox" name="benefit_opportunity_frame" value="Economic gain"> Economic gain</label>
+                    <label><input type="checkbox" name="benefit_opportunity_frame" value="Human – AI collaboration"> Human – AI collaboration</label>
+                    <label><input type="checkbox" name="benefit_opportunity_frame" value="Other"> Other</label>
+                    <input type="text" name="benefit_opportunity_frame_other" placeholder="Specify other benefit/opportunity frame">
+                </div>
+
+                <!-- 11. RISK / THREAT FRAME -->
+                <label for="risk_threat_frame">Risk / Threat Frame:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="risk_threat_frame" value="Shortcomings of AI technology"> Shortcomings of AI technology</label>
+                    <label><input type="checkbox" name="risk_threat_frame" value="Job loss"> Job loss</label>
+                    <label><input type="checkbox" name="risk_threat_frame" value="Privacy"> Privacy</label>
+                    <label><input type="checkbox" name="risk_threat_frame" value="AI as replacement"> AI as replacement</label>
+                    <label><input type="checkbox" name="risk_threat_frame" value="Other"> Other</label>
+                    <input type="text" name="risk_threat_frame_other" placeholder="Specify other risk/threat frame">
+                </div>
+
+                <!-- 12. AI ETHICS -->
+                <label for="ai_ethics">AI Ethics:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="ai_ethics" value="Bias"> Bias</label>
+                    <label><input type="checkbox" name="ai_ethics" value="Invasion of privacy"> Invasion of privacy</label>
+                    <label><input type="checkbox" name="ai_ethics" value="Policy and regulation"> Policy and regulation</label>
+                    <label><input type="checkbox" name="ai_ethics" value="Other"> Other</label>
+                    <input type="text" name="ai_ethics_other" placeholder="Specify other AI ethics">
+                </div>
+
+                <!-- 13. ATTRIBUTION OF RESPONSIBILITY -->
+                <label for="attribution_of_responsibility">Attribution of Responsibility:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="attribution_of_responsibility" value="Govt. Role / initiative"> Govt. Role / initiative</label>
+                    <label><input type="checkbox" name="attribution_of_responsibility" value="Private entity role / initiative"> Private entity role / initiative</label>
+                    <label><input type="checkbox" name="attribution_of_responsibility" value="NGO or other international org"> NGO or other international org</label>
+                    <label><input type="checkbox" name="attribution_of_responsibility" value="Other"> Other</label>
+                    <input type="text" name="attribution_of_responsibility_other" placeholder="Specify other attribution of responsibility">
+                </div>
+
+                <!-- 14. HUMAN INTEREST FRAME -->
+                <label for="human_interest_frame">Human Interest Frame:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="human_interest_frame" value="Personal vignette"> Personal vignette</label>
+                    <label><input type="checkbox" name="human_interest_frame" value="Personal life"> Personal life</label>
+                    <label><input type="checkbox" name="human_interest_frame" value="Individual / group affected"> Individual / group affected</label>
+                    <label><input type="checkbox" name="human_interest_frame" value="Other"> Other</label>
+                    <input type="text" name="human_interest_frame_other" placeholder="Specify other human interest frame">
+                </div>
+
+                <!-- 15. TYPE OF FRAME -->
+                <label for="type_of_frame">Type of Frame:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="type_of_frame" value="Episodic"> Episodic</label>
+                    <label><input type="checkbox" name="type_of_frame" value="Thematic"> Thematic</label>
+                </div>
+
+                <!-- 16. TONE OF THE ARTICLE -->
+                <label for="tone_of_article">Tone of the Article:</label>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" name="tone_of_article" value="Pessimistic"> Pessimistic</label>
+                    <label><input type="checkbox" name="tone_of_article" value="Neutral"> Neutral</label>
+                    <label><input type="checkbox" name="tone_of_article" value="Optimistic"> Optimistic</label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit">Save</button>
+            </form>
+            <div class="navigation-buttons">
+                {% if article_id > 0 %}
+                    <a href="{{ url_for('code_article', article_id=article_id-1) }}">Previous</a>
+                {% endif %}
+                {% if article_id < max_article_id %}
+                    <a href="{{ url_for('code_article', article_id=article_id+1) }}">Next</a>
+                {% endif %}
+                <br><br>
+                <a href="{{ url_for('index') }}">Back to Index</a>
+            </div>
+            <div class="progress">
+                <p>Article {{ article_id + 1 }} of {{ max_article_id + 1 }}</p>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <ul>
+            <li><a href="/contact">Contact Us</a></li>
+            <li><a href="/privacy">Privacy Policy</a></li>
+        </ul>
+        <p>&copy; 2024 Article Coding. All Rights Reserved.</p>
+    </footer>
+    <script>
+        function highlightSearch() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const contentElement = document.getElementById('articleContent');
+            const content = contentElement.innerText;
+            const highlightedContent = content.replace(new RegExp(input, 'gi'), match => `<span class="highlight">${match}</span>`);
+            contentElement.innerHTML = highlightedContent;
+        }
+    </script>
+</body>
+</html>
+
