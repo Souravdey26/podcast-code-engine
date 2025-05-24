@@ -1,254 +1,299 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
 import pandas as pd
 import mysql.connector
 import logging
-import re
+from datetime import datetime
+from io import BytesIO
 
-# Initialize Flask app
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# MySQL configurations
-db_config = {
-    'user': 'root',
-    'password': '@Gultu2024',
-    'host': 'localhost',
-    'database': 'content_analysis',
+podcast_db_config = {
+    'user': os.getenv('DB_USER', 'root'),
+    'password': os.getenv('DB_PASS', '@Gultu2025'),
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'database': os.getenv('DB_NAME', 'podcast_db'),
+    'port': int(os.getenv('DB_PORT', 3306))
 }
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-# Admin credentials
-ADMINS = [
-    {'username': 'admin1', 'password': 'password1'},
-    {'username': 'admin2', 'password': 'password2'}
-]
+podcasts_df = pd.DataFrame()
 
-# Function to load the dataset
-def load_dataset(file_path):
-    print(f"Loading dataset from {file_path}")
-    df = pd.read_csv(file_path)
-    print(df.dtypes)  # Debug statement to print data types
-    print(df.head())  # Print the first few rows of the DataFrame for inspection
-    
-    # Remove timezone information from the Date column
-    if 'Date' in df.columns:
-        df['Date'] = df['Date'].apply(lambda x: re.sub(r' [A-Z]{3}$', '', str(x)))
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-    
-    # Fill NaN values if necessary
-    df = df.fillna('')
+def test_mysql_connection():
+    try:
+        with mysql.connector.connect(**podcast_db_config):
+            logging.info("MySQL connection OK")
+    except Exception as e:
+        logging.error(f"MySQL connection error: {e}")
+
+test_mysql_connection()
+
+def load_podcast_dataset(csv_path):
+    df = pd.read_csv(csv_path, encoding='utf-8-sig')
+    df.columns = df.columns.str.strip()
+    df = df.rename(columns={
+        'Title': 'title',
+        'Views': 'views',
+        'Upload Date': 'upload_date',
+        'Description': 'description',
+        'URL': 'url',
+        'Podcaster': 'podcaster'
+    })
+    df['upload_date'] = pd.to_datetime(df['upload_date'], errors='coerce')
+    df['upload_date'] = df['upload_date'].dt.strftime('%Y-%m-%d')
+    df['description'] = df['description'].astype(str).str.replace('#', '')
+    df.fillna('', inplace=True)
+    df.insert(0, 'id', range(len(df)))
     return df
 
-# Function to populate articles table
-def populate_articles_table(df):
-    conn = mysql.connector.connect(**db_config)
+def populate_podcasts_table(df):
+    conn = mysql.connector.connect(**podcast_db_config)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM articles")  # Clear existing articles
-    for idx, row in df.iterrows():
-        cursor.execute("""
-            INSERT INTO articles (id, title, content, author, date, link)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (idx, row['Title'], row['Content'], row['Author'], row['Date'], row['Link']))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print("Articles table populated")
+    insert_sql = (
+        "INSERT INTO podcasts (title, views, upload_date, description, url, podcaster) "
+        "VALUES (%s, %s, %s, %s, %s, %s)"
+    )
+    data = df[['title','views','upload_date','description','url','podcaster']].values.tolist()
+    try:
+        cursor.executemany(insert_sql, data)
+        conn.commit()
+        logging.info(f"Inserted {len(data)} podcast records")
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Error inserting podcasts: {e}")
+        raise
+    finally:
+        cursor.close()
+        conn.close()
 
-# Load the default dataset at startup
 try:
-    df = load_dataset('C:/Users/deyso/OneDrive/Desktop/Final Datasets AI/hindu_ai_content_final.csv')
-    populate_articles_table(df)  # Populate articles table
-    print("Dataset loaded and articles table populated successfully at startup")
+    csv_path = os.getenv('PODCAST_CSV_PATH', r'C:\Users\deyso\OneDrive\Desktop\Podcast project\master_podcast_dataset.csv')
+    podcasts_df = load_podcast_dataset(csv_path)
+    populate_podcasts_table(podcasts_df)
+    logging.info("Podcast dataset initialized")
 except Exception as e:
-    print(f"Error loading dataset: {e}")
+    logging.error(f"Initialization error: {e}")
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        
-        print(f"Attempting login with username: {username} and password: {password}")
-        
-        # Check if the username and password match any admin credentials
-        admin = next((admin for admin in ADMINS if admin['username'] == username and admin['password'] == password), None)
-        
-        if admin:
-            session['logged_in'] = True
-            session['admin_username'] = username
-            print(f"Logged in as: {username}")
-            return redirect(url_for('index'))
-        else:
-            flash('Invalid credentials. Please try again.')
-            print("Invalid credentials")
-    return render_template('login.html')
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    session.pop('admin_username', None)
-    return redirect(url_for('login'))
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login'))
+VALID_USERS = {
+    'Sourav': 'sourav2025',
+    'Ayan': 'ayan2025',
+    'Ribhu': 'ribhu2025'
+}
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    global df
-    if request.method == 'POST':
-        print("POST request received for file upload")
-        if 'file' not in request.files:
-            flash('No file part')
-            print("No file part in request")
-            return redirect(request.url)
-        file = request.files['file']
-        if file.filename == '':
-            flash('No selected file')
-            print("No selected file")
-            return redirect(request.url)
-        if file:
-            try:
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-                file.save(file_path)
-                print(f"File saved to {file_path}")
-                df = load_dataset(file_path)
-                populate_articles_table(df)  # Populate articles table
-                flash('File successfully uploaded and dataset loaded')
-                print("File successfully uploaded and dataset loaded")
-            except Exception as e:
-                print(f"Error processing file upload: {e}")
-                flash(f"Error processing file upload: {e}")
-                return redirect(request.url)
-    try:
-        # Convert the DataFrame to a list of dictionaries
-        articles = df.to_dict(orient='records')
-        # Print a sample of articles for debugging
-        print(articles[:5])
-        return render_template('index.html', articles=articles)
-    except Exception as e:
-        print(f"Error rendering template: {e}")
-        return f"Error rendering template: {e}"
 
-@app.route('/code_article/<int:article_id>/', methods=['GET', 'POST'])
+    global podcasts_df
+
+    if request.method == 'POST':
+        file = request.files.get('file')
+        if file and file.filename:
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
+            podcasts_df = load_podcast_dataset(filepath)
+            flash('Dataset reloaded', 'success')
+        return redirect(url_for('index'))
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 100
+    start = (page - 1) * per_page
+    end = start + per_page
+
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT article_id, coder, importance, notes, status FROM codes")
+    codes = {r['article_id']: r for r in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+
+    articles = []
+    for _, row in podcasts_df.iloc[start:end].iterrows():
+        art = row.to_dict()
+        code = codes.get(art['id'], {})
+        art['coded'] = bool(code)
+        art['coder'] = code.get('coder', '')
+        art['importance'] = code.get('importance', '')
+        art['notes'] = code.get('notes', '')
+        art['status'] = code.get('status') or 'pending'
+        articles.append(art)
+
+    total_pages = -(-len(podcasts_df) // per_page)
+    return render_template('index.html', articles=articles,
+                           username=session.get('admin_username'),
+                           page=page, total_pages=total_pages)
+
+@app.route('/login', methods=['GET','POST'])
+def login():
+    if request.method == 'POST':
+        user = request.form['username']
+        pwd = request.form['password']
+        if VALID_USERS.get(user) == pwd:
+            session['logged_in'] = True
+            session['admin_username'] = user
+            return redirect(url_for('index'))
+        flash('Invalid credentials', 'danger')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/code_article/<int:article_id>/', methods=['GET','POST'])
 def code_article(article_id):
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    try:
-        article = df.iloc[article_id]
-        print(f"Displaying article ID: {article_id}")
-    except Exception as e:
-        print(f"Error retrieving article: {e}")
-        return f"Error retrieving article: {e}"
-    
-    if request.method == 'POST':
-        try:
-            # Collect form data
-            coding_data = {
-                'article_id': article_id,
-                'publication_name': request.form['publication_name'],
-                'publication_type': request.form.getlist('publication_type'),
-                'date_of_publication': request.form['date_of_publication'],
-                'type_of_article': request.form.getlist('type_of_article'),
-                'author_name': request.form['author_name'],
-                'type_of_author': request.form.getlist('type_of_author'),
-                'focus_main_topic': request.form.getlist('focus_main_topic'),
-                'actor_mentioned': request.form.getlist('actor_mentioned'),
-                'dominant_frame': request.form.getlist('dominant_frame'),
-                'benefit_opportunity_frame': request.form.getlist('benefit_opportunity_frame'),
-                'risk_threat_frame': request.form.getlist('risk_threat_frame'),
-                'ai_ethics': request.form.getlist('ai_ethics'),
-                'attribution_of_responsibility': request.form.getlist('attribution_of_responsibility'),
-                'human_interest_frame': request.form.getlist('human_interest_frame'),
-                'type_of_frame': request.form.getlist('type_of_frame'),
-                'tone_of_article': request.form.getlist('tone_of_article')
-            }
-            print(f"Received coding data for article ID {article_id}: {coding_data}")
-            
-            # Save the coded data to the MySQL database
-            conn = mysql.connector.connect(**db_config)
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO codes (article_id, publication_name, publication_type, date_of_publication, type_of_article, author_name, type_of_author, focus_main_topic, actor_mentioned, dominant_frame, benefit_opportunity_frame, risk_threat_frame,
-                ai_ethics, attribution_of_responsibility, human_interest_frame, type_of_frame, tone_of_article)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                coding_data['article_id'],
-                coding_data['publication_name'],
-                ', '.join(coding_data['publication_type']),
-                coding_data['date_of_publication'],
-                ', '.join(coding_data['type_of_article']),
-                coding_data['author_name'],
-                ', '.join(coding_data['type_of_author']),
-                ', '.join(coding_data['focus_main_topic']),
-                ', '.join(coding_data['actor_mentioned']),
-                ', '.join(coding_data['dominant_frame']),
-                ', '.join(coding_data['benefit_opportunity_frame']),
-                ', '.join(coding_data['risk_threat_frame']),
-                ', '.join(coding_data['ai_ethics']),
-                ', '.join(coding_data['attribution_of_responsibility']),
-                ', '.join(coding_data['human_interest_frame']),
-                ', '.join(coding_data['type_of_frame']),
-                ', '.join(coding_data['tone_of_article'])
-            ))
-            conn.commit()
+
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor(dictionary=True)
+
+    code_data = None
+    if request.method == 'GET':
+        cursor.execute("SELECT * FROM codes WHERE article_id = %s", (article_id,))
+        code_data = cursor.fetchone()
+
+        if code_data and code_data['status'] == 'in_progress' and code_data['coder'] != session['admin_username']:
             cursor.close()
             conn.close()
-            print("Data saved to database")
+            flash(f"This episode is currently being coded by {code_data['coder']}", 'danger')
             return redirect(url_for('index'))
-        except Exception as e:
-            print(f"Error saving data to database: {e}")
-            return f"Error saving data to database: {e}"
-    
-    max_article_id = len(df) - 1
-    
-    try:
-        return render_template('code_article.html', article=article, article_id=article_id, max_article_id=max_article_id)
-    except Exception as e:
-        print(f"Error rendering template: {e}")
-        return f"Error rendering template: {e}"
 
-@app.route('/search')
-def search():
+        cursor.execute("""
+            INSERT INTO codes (article_id, status, coder)
+            VALUES (%s, %s, %s)
+            ON DUPLICATE KEY UPDATE status='in_progress', coder=%s
+        """, (article_id, 'in_progress', session['admin_username'], session['admin_username']))
+        conn.commit()
+
+    elif request.method == 'POST':
+        values = {
+            'article_id': article_id,
+            'topic': request.form.get('topic',''),
+            'theme': request.form.get('theme',''),
+            'guest_name': request.form.get('guest_name',''),
+            'guest_type': request.form.get('guest_type',''),
+            'guest_affiliation': request.form.get('guest_affiliation',''),
+            'importance': int(request.form.get('importance',0)),
+            'notes': request.form.get('notes',''),
+            'coder': session['admin_username']
+        }
+        cursor.execute("""
+            INSERT INTO codes (article_id, topic, theme, guest_name, guest_type, guest_affiliation, importance, notes, coder, status)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s, 'done')
+            ON DUPLICATE KEY UPDATE
+              topic=VALUES(topic), theme=VALUES(theme), guest_name=VALUES(guest_name),
+              guest_type=VALUES(guest_type), guest_affiliation=VALUES(guest_affiliation),
+              importance=VALUES(importance), notes=VALUES(notes), coder=VALUES(coder), status='done'
+        """, tuple(values.values()))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        next_id = article_id+1 if article_id+1 < len(podcasts_df) else None
+        return redirect(url_for('code_article', article_id=next_id) if next_id is not None else url_for('index'))
+
+    article = podcasts_df.iloc[article_id].to_dict()
+    if code_data:
+        article.update(code_data)
+
+    cursor.close()
+    conn.close()
+    max_id = len(podcasts_df)-1
+    return render_template('code_article.html', article=article,
+                           article_id=article_id, max_id=max_id)
+
+@app.route('/release_lock/<int:article_id>', methods=['POST'])
+def release_lock(article_id):
     if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    query = request.args.get('query', '').lower()
-    results = df[df['Title'].str.lower().str.contains(query, na=False)]
-    articles = results.to_dict(orient='records')
-    articles = results.to_dict(orient='records')
-    return render_template('index.html', articles=articles)
+        return '', 204
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE codes
+        SET status = 'pending'
+        WHERE article_id = %s AND status = 'in_progress' AND coder = %s
+    """, (article_id, session['admin_username']))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return '', 204
 
 @app.route('/view_codes')
 def view_codes():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM codes")
-        codes = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return render_template('view_codes.html', codes=codes)
-    except Exception as e:
-        print(f"Error retrieving codes from database: {e}")
-        return f"Error retrieving codes from database: {e}"
+
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM codes WHERE status = 'done' ORDER BY article_id")
+    codes = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return render_template('view_codes.html', codes=codes)
+
+
+@app.route('/delete_code/<int:code_id>', methods=['POST'])
+def delete_code(code_id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM codes WHERE article_id=%s", (code_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash('Entry deleted', 'success')
+    return redirect(url_for('view_codes'))
+
+@app.route('/export_codes')
+def export_codes():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM codes ORDER BY article_id")
+    data = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    df_export = pd.DataFrame(data)
+    buf = BytesIO()
+    df_export.to_csv(buf, index=False)
+    buf.seek(0)
+    fname = datetime.now().strftime("codes_%Y%m%d_%H%M%S.csv")
+    return send_file(buf, as_attachment=True, download_name=fname, mimetype='text/csv')
+
+@app.route('/update_coded_status', methods=['POST'])
+def update_coded_status():
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT article_id, coder, importance, notes, status FROM codes")
+    status = {r['article_id']: r for r in cursor.fetchall()}
+    cursor.close()
+    conn.close()
+    return jsonify(status)
+
+@app.route('/autocomplete/<field>')
+def autocomplete(field):
+    allowed_fields = ['topic', 'theme', 'guest_name', 'guest_type', 'guest_affiliation']
+    if field not in allowed_fields:
+        return jsonify([])  # safeguard
+
+    conn = mysql.connector.connect(**podcast_db_config)
+    cursor = conn.cursor()
+    cursor.execute(f"SELECT DISTINCT {field} FROM codes WHERE {field} IS NOT NULL AND {field} != ''")
+    results = sorted(set(r[0] for r in cursor.fetchall() if r[0]))
+    cursor.close()
+    conn.close()
+    return jsonify(results)
+
 
 if __name__ == '__main__':
-    print("Starting Flask app on port 5002...")
-    app.run(debug=True, port=5002)
-
+    app.run(debug=True, port=5003)

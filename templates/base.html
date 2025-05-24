@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <title>{% block title %}Code Engine{% endblock %}</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% if not hide_nav %}
+  <nav>
+    <div class="nav-left">
+      <a href="/">Home</a>
+      <a href="/view_codes">View Codes</a>
+      <a href="/logout">Logout</a>
+    </div>
+
+    <div class="nav-center">
+      <div class="logo">CODE ENGINE</div>
+    </div>
+
+    <div class="nav-right">
+      <div class="user-info">Logged in as: {{ session.get('admin_username') }}</div>
+      <button id="themeToggle" class="btn" style="margin-left: 1rem;">Toggle Theme</button>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="container {% if hide_nav %}no-nav{% endif %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block extra_scripts %}
+  <script>
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.classList.toggle('light', savedTheme === 'light');
+
+    document.getElementById('themeToggle')?.addEventListener('click', () => {
+      const isLight = document.documentElement.classList.toggle('light');
+      localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    });
+  </script>
+  {% endblock %}
+</body>
+</html>
