@@ -92,7 +92,8 @@ def index():
     conn = mysql.connector.connect(**podcast_db_config)
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("SELECT * FROM podcasts ORDER BY upload_date DESC LIMIT %s OFFSET %s", (per_page, offset))
+    cursor.execute("SELECT * FROM podcasts ORDER BY id ASC LIMIT %s OFFSET %s", (per_page, offset))
+
     rows = cursor.fetchall()
 
     cursor.execute("SELECT article_id, coder, importance, notes, status FROM codes")
@@ -111,7 +112,13 @@ def index():
         art['status'] = code.get('status') or 'pending'
         articles.append(art)
 
-    total_count = offset + len(articles)
+    count_conn = mysql.connector.connect(**podcast_db_config)
+count_cursor = count_conn.cursor()
+count_cursor.execute("SELECT COUNT(*) FROM podcasts")
+total_count = count_cursor.fetchone()[0]
+count_cursor.close()
+count_conn.close()
+
     total_pages = -(-total_count // per_page)
 
     return render_template('index.html', articles=articles,
