@@ -23,6 +23,8 @@ podcast_db_config = {
 
 logging.basicConfig(level=logging.INFO)
 
+# Skip loading CSV file in production
+logging.info("Skipping CSV load — using database only")
 podcasts_df = pd.DataFrame()
 
 def test_mysql_connection():
@@ -72,14 +74,6 @@ def populate_podcasts_table(df):
         cursor.close()
         conn.close()
 
-try:
-    csv_path = os.getenv('PODCAST_CSV_PATH', r'C:\Users\deyso\OneDrive\Desktop\Podcast project\master_podcast_dataset.csv')
-    podcasts_df = load_podcast_dataset(csv_path)
-    populate_podcasts_table(podcasts_df)
-    logging.info("Podcast dataset initialized")
-except Exception as e:
-    logging.error(f"Initialization error: {e}")
-
 VALID_USERS = {
     'Sourav': 'sourav2025',
     'Ayan': 'ayan2025',
@@ -91,33 +85,25 @@ def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
 
-    global podcasts_df
-
-    if request.method == 'POST':
-        file = request.files.get('file')
-        if file and file.filename:
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            podcasts_df = load_podcast_dataset(filepath)
-            flash('Dataset reloaded', 'success')
-        return redirect(url_for('index'))
-
     page = request.args.get('page', 1, type=int)
     per_page = 100
-    start = (page - 1) * per_page
-    end = start + per_page
+    offset = (page - 1) * per_page
 
     conn = mysql.connector.connect(**podcast_db_config)
     cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM podcasts ORDER BY upload_date DESC LIMIT %s OFFSET %s", (per_page, offset))
+    rows = cursor.fetchall()
+
     cursor.execute("SELECT article_id, coder, importance, notes, status FROM codes")
     codes = {r['article_id']: r for r in cursor.fetchall()}
     cursor.close()
     conn.close()
 
     articles = []
-    for _, row in podcasts_df.iloc[start:end].iterrows():
-        art = row.to_dict()
-        code = codes.get(art['id'], {})
+    for row in rows:
+        art = row
+        code = codes.get(row['id'], {})
         art['coded'] = bool(code)
         art['coder'] = code.get('coder', '')
         art['importance'] = code.get('importance', '')
@@ -125,7 +111,9 @@ def index():
         art['status'] = code.get('status') or 'pending'
         articles.append(art)
 
-    total_pages = -(-len(podcasts_df) // per_page)
+    total_count = offset + len(articles)
+    total_pages = -(-total_count // per_page)
+
     return render_template('index.html', articles=articles,
                            username=session.get('admin_username'),
                            page=page, total_pages=total_pages)
@@ -196,16 +184,22 @@ def code_article(article_id):
         conn.commit()
         cursor.close()
         conn.close()
-        next_id = article_id+1 if article_id+1 < len(podcasts_df) else None
-        return redirect(url_for('code_article', article_id=next_id) if next_id is not None else url_for('index'))
 
-    article = podcasts_df.iloc[article_id].to_dict()
+        return redirect(url_for('index'))
+
+    cursor.execute("SELECT * FROM podcasts WHERE id = %s", (article_id,))
+    article = cursor.fetchone()
     if code_data:
         article.update(code_data)
 
     cursor.close()
     conn.close()
-    max_id = len(podcasts_df)-1
+
+    cursor = mysql.connector.connect(**podcast_db_config).cursor()
+    cursor.execute("SELECT COUNT(*) FROM podcasts")
+    max_id = cursor.fetchone()[0] - 1
+    cursor.close()
+
     return render_template('code_article.html', article=article,
                            article_id=article_id, max_id=max_id)
 
@@ -238,7 +232,6 @@ def view_codes():
     conn.close()
 
     return render_template('view_codes.html', codes=codes)
-
 
 @app.route('/delete_code/<int:code_id>', methods=['POST'])
 def delete_code(code_id):
@@ -293,7 +286,6 @@ def autocomplete(field):
     cursor.close()
     conn.close()
     return jsonify(results)
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5003)
