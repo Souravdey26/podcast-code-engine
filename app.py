@@ -113,11 +113,11 @@ def index():
         articles.append(art)
 
     count_conn = mysql.connector.connect(**podcast_db_config)
-count_cursor = count_conn.cursor()
-count_cursor.execute("SELECT COUNT(*) FROM podcasts")
-total_count = count_cursor.fetchone()[0]
-count_cursor.close()
-count_conn.close()
+    count_cursor = count_conn.cursor()
+    count_cursor.execute("SELECT COUNT(*) FROM podcasts")
+    total_count = count_cursor.fetchone()[0]
+    count_cursor.close()
+    count_conn.close()
 
     total_pages = -(-total_count // per_page)
 
