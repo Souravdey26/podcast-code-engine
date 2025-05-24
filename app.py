@@ -202,10 +202,13 @@ def code_article(article_id):
     cursor.close()
     conn.close()
 
-    cursor = mysql.connector.connect(**podcast_db_config).cursor()
-    cursor.execute("SELECT COUNT(*) FROM podcasts")
-    max_id = cursor.fetchone()[0] - 1
-    cursor.close()
+    conn2 = mysql.connector.connect(**podcast_db_config)
+    cursor2 = conn2.cursor()
+    cursor2.execute("SELECT COUNT(*) FROM podcasts")
+    max_id = cursor2.fetchone()[0] - 1
+    cursor2.close()
+    conn2.close()
+
 
     return render_template('code_article.html', article=article,
                            article_id=article_id, max_id=max_id)
